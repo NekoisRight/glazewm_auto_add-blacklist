@@ -1,4 +1,4 @@
-# GlazeWM 自动添加进程黑名单 
+# GlazeWM 自动添加进程黑名单
 
 > 为 GlazeWM 自动添加进程黑名单，解放双手 \^o^/
 
@@ -10,7 +10,7 @@
 2. **绑定快捷键** — 在 `config.yaml` 中添加如下指令：
 
 ```yaml
-- commands: ['shell-exec "%USERPROFILE%\.glzr\add-blacklist.exe"']
+- commands: ['shell-exec %USERPROFILE%\.glzr\add-blacklist.exe']
   bindings: ['alt+shift+b']
 ```
 
