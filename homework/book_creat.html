@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue.js图书创建系统</title>
+  <!-- 引入Vue.js -->
+  <script src="vue.global.js"></script>
+  <style>
+    /* 基础样式优化 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    .form-section, .preview-section {
+      background: #f8f9fa;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgb(0,0,0,0.1);
+    }
+    /* 其他样式省略，完整样式见代码示例 */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .error {
+      color: red;
+      font-size: 12px;
+      display: none;
+    }
+    .error.show {
+      display: block;
+    }
+    .preview-img {
+      width: 200px;
+      height: 260px;
+      background: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- ===================== 表单区域 ===================== -->
+    <div class="form-section">
+      <h2>创建图书信息</h2>
+      <form @submit.prevent="handleCreate">
+        <!-- 书名输入框 -->
+        <div class="form-group">
+          <label for="bookName">书名 <span style="color:red">*</span></label>
+          <input
+            type="text"
+            id="bookName"
+            v-model.trim="bookInfo.name"
+            placeholder="请输入图书名称"
+            @blur="validateField('name')"
+          >
+          <div class="error" :class="{show: errors.name}">{{ errors.name }}</div>
+        </div>
+
+        <!-- 作者 -->
+        <div class="form-group">
+          <label for="author">作者 <span style="color:red">*</span></label>
+          <input
+            type="text"
+            id="author"
+            v-model="bookInfo.author"
+            placeholder="请输入作者"
+            @blur="validateField('author')"
+          >
+          <div class="error" :class="{show: errors.author}">{{ errors.author }}</div>
+        </div>
+
+        <!-- 单价 -->
+        <div class="form-group">
+          <label for="price">单价 <span style="color:red">*</span></label>
+          <input
+            type="number"
+            id="price"
+            v-model.number="bookInfo.price"
+            placeholder="请输入单价"
+            @blur="validateField('price')"
+          >
+          <div class="error" :class="{show: errors.price}">{{ errors.price }}</div>
+        </div>
+
+        <!-- 所属分类 -->
+        <div class="form-group">
+          <label for="categoryId">所属分类 <span style="color:red">*</span></label>
+          <select
+            id="categoryId"
+            v-model="bookInfo.categoryId"
+            @blur="validateField('categoryId')"
+          >
+            <option value="">请选择分类</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
+          <div class="error" :class="{show: errors.categoryId}">{{ errors.categoryId }}</div>
+        </div>
+
+        <!-- 封面图片 -->
+        <div class="form-group">
+          <label for="cover">封面图片</label>
+          <input type="file" id="cover" accept="image/*" @change="handleImageUpload">
+          <div class="error" :class="{show: errors.cover}">{{ errors.cover }}</div>
+        </div>
+
+        <!-- 图书简介 -->
+        <div class="form-group">
+          <label for="description">图书简介</label>
+          <textarea
+            id="description"
+            v-model.lazy="bookInfo.description"
+            rows="3"
+            placeholder="请输入图书简介"
+          ></textarea>
+        </div>
+
+        <!-- 是否出版 -->
+        <div class="form-group">
+          <label>
+            <input type="checkbox" v-model="bookInfo.isPublished" true-value="已出版" false-value="未出版">
+            是否出版
+          </label>
+        </div>
+
+        <button type="submit">创建图书</button>
+      </form>
+    </div>
+
+    <!-- ===================== 预览区域 ===================== -->
+    <div class="preview-section">
+      <h2>图书信息预览</h2>
+      <div class="preview-card" v-if="previewVisible && bookInfo.name">
+        <!-- 封面预览 -->
+        <div class="preview-img">
+          <img
+            v-if="bookInfo.coverUrl"
+            :src="bookInfo.coverUrl"
+            alt="图书封面"
+            style="width:100%;height:100%;object-fit:cover;"
+          >
+          <span v-else>暂无封面图片</span>
+        </div>
+        <!-- 信息预览 -->
+        <div class="preview-info">
+          <p><strong>书名：</strong>{{ bookInfo.name }}</p>
+          <p><strong>作者：</strong>{{ bookInfo.author }}</p>
+          <p><strong>单价：</strong>{{ bookInfo.price }}</p>
+          <p><strong>分类：</strong>{{ getCategoryName(bookInfo.categoryId) }}</p>
+          <p><strong>简介：</strong>{{ bookInfo.description }}</p>
+          <p><strong>出版状态：</strong>{{ bookInfo.isPublished }}</p>
+        </div>
+      </div>
+      <div v-else style="text-align:center;padding:2rem;color:#999;">
+        <div>暂无预览信息</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 创建 Vue 应用
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          // 图书信息数据模型
+          bookInfo: {
+            name: "",            // 书名
+            author: "",          // 作者
+            price: 0,            // 单价（number 类型）
+            categoryId: "",      // 分类 ID（键值对绑定）
+            coverUrl: "",        // 封面图片 URL
+            description: "",     // 简介
+            isPublished: '未出版' // 出版状态
+          },
+          // 分类列表（键值对数据源）
+          categories: [
+            { id: 1, name: '计算机科学' },
+            { id: 2, name: '文学小说' }
+            // 其他分类添加
+          ],
+          errors: {},
+          previewVisible: false
+        };
+      },
+      methods: {
+        // 单个字段验证
+        validateField(field) {
+          this.errors[field] = "";
+          const value = this.bookInfo[field];
+          // 书名验证
+          if (field === 'name' && !value.trim()) {
+            this.errors[field] = '书名不能为空';
+          }
+          // 作者验证
+          else if (field === 'author' && !value.trim()) {
+            this.errors[field] = '作者不能为空';
+          }
+          // 单价验证
+          else if (field === 'price' && (!value || value <= 0)) {
+            this.errors[field] = '单价必须大于 0';
+          }
+          // 分类验证
+          else if (field === 'categoryId' && !value) {
+            this.errors[field] = '请选择分类';
+          }
+          // 其他字段验证逻辑
+        },
+        // 表单整体验证
+        validateForm() {
+          let isValid = true;
+          // 验证必填字段
+          ['name', 'author', 'price', 'categoryId'].forEach(field => {
+            this.validateField(field);
+            if (this.errors[field]) isValid = false;
+          });
+          return isValid;
+        },
+        // 处理图片上传
+        handleImageUpload(e) {
+          const file = e.target.files[0];
+          if (file) {
+            // 简单验证图片大小（不超过 2MB）
+            if (file.size > 2 * 1024 * 1024) {
+              this.errors.cover = '图片大小不能超过 2MB';
+              this.bookInfo.coverUrl = '';
+              return;
+            }
+            // 预览图片（使用 FileReader）
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              this.bookInfo.coverUrl = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            this.errors.cover = ''; // 清除错误
+          }
+        },
+        // 获取分类名称（通过 ID 匹配）
+        getCategoryName(categoryId) {
+          const category = this.categories.find(cat => cat.id === categoryId);
+          return category ? category.name : '未选择';
+        },
+        // 处理创建图书
+        handleCreate() {
+          // 表单验证
+          if (!this.validateForm()) return;
+          // 显示预览
+          this.previewVisible = true;
+          // （可选）实际项目中可在此处添加接口请求逻辑
+          console.log('图书创建成功，信息如下：', this.bookInfo);
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
